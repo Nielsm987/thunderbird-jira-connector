@@ -1,0 +1,28 @@
+{
+  "name": "thunderbird-jira-connector",
+  "version": "1.0.0",
+  "description": "Seamlessly create Jira issues from Thunderbird emails",
+  "main": "background.js",
+  "scripts": {
+    "package": "zip -r thunderbird-jira-connector.xpi manifest.json background.js jira-api.js selection-dialog.html selection-dialog.js options/ icons/",
+    "dev": "echo 'Load the extension in Thunderbird Developer Tools'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nielsm987/thunderbird-jira-connector.git"
+  },
+  "keywords": [
+    "thunderbird",
+    "jira",
+    "email",
+    "integration",
+    "extension",
+    "addon"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Nielsm987/thunderbird-jira-connector/issues"
+  },
+  "homepage": "https://github.com/Nielsm987/thunderbird-jira-connector#readme"
+}

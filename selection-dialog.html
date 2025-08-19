@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Jira Project</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .dialog-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+
+        .dialog-header {
+            background: linear-gradient(135deg, #0052cc, #026aa7);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .dialog-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dialog-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .dialog-content {
+            padding: 20px;
+        }
+
+        .email-info {
+            background: #f4f5f7;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0052cc;
+        }
+
+        .email-info h3 {
+            color: #42526e;
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+
+        .email-subject {
+            color: #6b778c;
+            font-style: italic;
+            word-break: break-word;
+        }
+
+        .form-section {
+            margin-bottom: 20px;
+        }
+
+        .form-section h3 {
+            color: #42526e;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 40px 10px 12px;
+            border: 2px solid #dfe1e6;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #0052cc;
+            box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b778c;
+        }
+
+        .project-list,
+        .issuetype-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #dfe1e6;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .project-item,
+        .issuetype-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #f4f5f7;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .project-item:last-child,
+        .issuetype-item:last-child {
+            border-bottom: none;
+        }
+
+        .project-item:hover,
+        .issuetype-item:hover {
+            background: #f4f5f7;
+        }
+
+        .project-item.selected,
+        .issuetype-item.selected {
+            background: #e3fcef;
+            border-left: 4px solid #00875a;
+        }
+
+        .project-name,
+        .issuetype-name {
+            font-weight: 500;
+            color: #42526e;
+        }
+
+        .project-key {
+            font-size: 0.85rem;
+            color: #6b778c;
+            margin-left: 8px;
+        }
+
+        .issuetype-description {
+            font-size: 0.85rem;
+            color: #6b778c;
+            margin-top: 2px;
+        }
+
+        .no-results {
+            padding: 20px;
+            text-align: center;
+            color: #6b778c;
+            font-style: italic;
+        }
+
+        .loading {
+            padding: 20px;
+            text-align: center;
+            color: #6b778c;
+        }
+
+        .error {
+            padding: 15px;
+            background: #ffebe6;
+            color: #de350b;
+            border: 1px solid #ff8f73;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .dialog-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            padding: 20px;
+            background: #f4f5f7;
+            border-top: 1px solid #e1e5e9;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #0052cc;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #026aa7;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 82, 204, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6b778c;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5e6c84;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(107, 119, 140, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Scrollbar styling */
+        .project-list::-webkit-scrollbar,
+        .issuetype-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .project-list::-webkit-scrollbar-track,
+        .issuetype-list::-webkit-scrollbar-track {
+            background: #f4f5f7;
+        }
+
+        .project-list::-webkit-scrollbar-thumb,
+        .issuetype-list::-webkit-scrollbar-thumb {
+            background: #dfe1e6;
+            border-radius: 3px;
+        }
+
+        .project-list::-webkit-scrollbar-thumb:hover,
+        .issuetype-list::-webkit-scrollbar-thumb:hover {
+            background: #b3bac5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dialog-container">
+        <div class="dialog-header">
+            <h1>🎯 Create Jira Issue</h1>
+            <p>Select project and issue type for your email</p>
+        </div>
+
+        <div class="dialog-content">
+            <div class="email-info">
+                <h3>📧 Email Subject:</h3>
+                <div class="email-subject" id="emailSubject">Loading...</div>
+            </div>
+
+            <div id="errorContainer"></div>
+
+            <div class="form-section">
+                <h3>🏗️ Select Project</h3>
+                <div class="search-container">
+                    <input type="text" id="projectSearch" class="search-input" placeholder="Search projects...">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div id="projectList" class="project-list">
+                    <div class="loading">Loading projects...</div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>📋 Select Issue Type</h3>
+                <div id="issueTypeList" class="issuetype-list">
+                    <div class="loading">Select a project first...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dialog-actions">
+            <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="createBtn" class="btn btn-primary" disabled>Create Issue</button>
+        </div>
+    </div>
+
+    <script src="selection-dialog.js"></script>
+</body>
+
+</html>

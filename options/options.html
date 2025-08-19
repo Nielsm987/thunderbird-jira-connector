@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jira Connector Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🔗 Jira Connector Settings</h1>
+            <p>Configure your Jira connection to start creating issues from emails</p>
+        </header>
+
+        <main>
+            <form id="settingsForm">
+                <section class="form-section">
+                    <h2>🌐 Jira Server Configuration</h2>
+
+                    <div class="form-group">
+                        <label for="jiraBaseUrl">Jira Base URL</label>
+                        <input type="url" id="jiraBaseUrl" name="jiraBaseUrl"
+                            placeholder="https://your-company.atlassian.net" required>
+                        <small>Enter your Jira server URL (including https://)</small>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2>🔐 Authentication</h2>
+
+                    <div class="form-group">
+                        <label for="jiraUsername">Username/Email</label>
+                        <input type="email" id="jiraUsername" name="jiraUsername" placeholder="your-email@company.com"
+                            required>
+                        <small>Your Jira account email address</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jiraApiToken">API Token</label>
+                        <input type="password" id="jiraApiToken" name="jiraApiToken" placeholder="Your Jira API Token"
+                            required>
+                        <small>
+                            <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">
+                                Create an API token here
+                            </a>
+                        </small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="testConnection" class="btn-secondary">
+                            🔍 Test Connection
+                        </button>
+                        <div id="connectionStatus" class="status-message"></div>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2>⚙️ Advanced Settings</h2>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="showNotifications" name="showNotifications" checked>
+                            Show notifications when issues are created
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="stripSignatures" name="stripSignatures" checked>
+                            Automatically remove email signatures from issue descriptions
+                        </label>
+                    </div>
+                </section>
+
+                <div class="form-actions">
+                    <button type="submit" id="saveSettings" class="btn-primary">
+                        💾 Save Settings
+                    </button>
+                    <button type="button" id="resetSettings" class="btn-danger">
+                        🗑️ Reset to Defaults
+                    </button>
+                </div>
+            </form>
+
+            <div id="saveStatus" class="status-message"></div>
+        </main>
+
+        <footer>
+            <div class="help-section">
+                <h3>📖 Quick Setup Guide</h3>
+                <ol>
+                    <li>Enter your Jira server URL (e.g., https://yourcompany.atlassian.net)</li>
+                    <li>Enter your Jira account email</li>
+                    <li>Create an API token from your Atlassian account settings</li>
+                    <li>Click "Test Connection" to verify your settings</li>
+                    <li>Save your settings</li>
+                </ol>
+
+                <p>
+                    <strong>Need help?</strong>
+                    <a href="https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/"
+                        target="_blank">
+                        Learn how to create API tokens
+                    </a>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+
+</html>
