@@ -13,13 +13,21 @@
   "background": {
     "scripts": ["jira-api.js", "background.js"]
   },
+  "message_display_action": {
+    "default_title": "Jira Connector",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
   "permissions": [
     "messagesRead",
     "accountsRead",
     "storage",
     "menus",
     "notifications",
-    "activeTab"
+    "activeTab",
+    "messageDisplayAction"
   ],
   "host_permissions": [
     "https://*/*",

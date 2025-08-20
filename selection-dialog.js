@@ -43,20 +43,50 @@ function setupEventListeners() {
  */
 async function loadData() {
     try {
-        // Request data from background script
-        const response = await browser.runtime.sendMessage({ type: 'GET_DATA' });
+        console.log('Requesting projects from background script...');
         
-        if (response && response.projects) {
-            projects = response.projects;
-            
-            console.log('Loaded data:', { 
-                projectCount: projects.length
-            });
-            
-            renderProjects();
-        } else {
-            throw new Error('Failed to load projects');
+        // Request data from background script with retry logic
+        let response;
+        let retries = 3;
+        
+        while (retries > 0) {
+            try {
+                response = await browser.runtime.sendMessage({ type: 'GET_DATA' });
+                console.log('Response received:', response);
+                
+                if (response && response.projects && Array.isArray(response.projects)) {
+                    break; // Success, exit retry loop
+                }
+                
+                console.log(`Invalid response, retries left: ${retries - 1}`);
+                retries--;
+                
+                if (retries > 0) {
+                    // Wait a bit before retrying
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            } catch (error) {
+                console.error(`Request failed, retries left: ${retries - 1}`, error);
+                retries--;
+                
+                if (retries > 0) {
+                    // Wait a bit before retrying
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
         }
+        
+        if (!response || !response.projects || !Array.isArray(response.projects)) {
+            throw new Error('Failed to load projects after retries. Response: ' + JSON.stringify(response));
+        }
+        
+        projects = response.projects;
+        
+        console.log('Loaded data successfully:', { 
+            projectCount: projects.length
+        });
+        
+        renderProjects();
         
     } catch (error) {
         console.error('Error loading data:', error);

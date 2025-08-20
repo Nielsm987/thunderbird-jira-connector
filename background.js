@@ -3,6 +3,9 @@
  * Handles context menu integration and Jira API communication
  */
 
+// Test if JiraAPI is loaded
+console.log('Background script loading, JiraAPI available:', typeof JiraAPI);
+
 // Initialize the extension immediately
 init();
 
@@ -14,19 +17,31 @@ function init() {
   console.log('Thunderbird Jira Connector initialized');
   setupContextMenu();
   setupMessageHandler();
+  setupMessageDisplayAction();
 }
 
 /**
  * Setup context menu for emails
  */
 function setupContextMenu() {
-  browser.menus.create({
-    id: "send-to-jira",
-    title: "Send to Jira",
-    contexts: ["message_list"],
-    icons: {
-      "16": "icons/icon-16.png"
-    }
+  console.log('Setting up context menu...');
+  
+  // Remove existing menu item if it exists
+  browser.menus.removeAll().then(() => {
+    browser.menus.create({
+      id: "send-to-jira",
+      title: "Send to Jira",
+      contexts: ["message_list"],
+      icons: {
+        "16": "icons/icon-16.png"
+      }
+    }, () => {
+      if (browser.runtime.lastError) {
+        console.error('Error creating context menu:', browser.runtime.lastError);
+      } else {
+        console.log('Context menu created successfully');
+      }
+    });
   });
 }
 
@@ -34,12 +49,14 @@ function setupContextMenu() {
  * Handle context menu clicks
  */
 browser.menus.onClicked.addListener(async (info, tab) => {
+  console.log('Context menu clicked - menuItemId:', info.menuItemId);
   if (info.menuItemId === "send-to-jira") {
     try {
       console.log('Send to Jira clicked', info);
       
       // Check if Jira is configured
       const isConfigured = await JiraAPI.isConfigured();
+      console.log('Jira configured:', isConfigured);
       if (!isConfigured) {
         browser.notifications.create({
           type: "basic",
@@ -111,6 +128,9 @@ async function processMessage(message) {
     };
 
     const createdIssue = await JiraAPI.createIssue(issueData);
+
+    // Store the link between message and Jira issue
+    await storeJiraIssueLink(message.id, createdIssue);
 
     // Show success notification
     browser.notifications.create({
@@ -244,7 +264,16 @@ async function showProjectSelectionDialog(projects, emailSubject) {
       const messageListener = (message, sender, sendResponse) => {
         if (sender.tab && sender.tab.windowId === window.id) {
           if (message.type === 'GET_DATA') {
-            sendResponse({ projects });
+            console.log('Sending projects to dialog:', { projectCount: projects ? projects.length : 0 });
+            try {
+              const response = { projects: projects || [] };
+              sendResponse(response);
+              return true; // Keep the message channel open
+            } catch (error) {
+              console.error('Error sending projects:', error);
+              sendResponse({ error: error.message });
+              return true;
+            }
           } else if (message.type === 'GET_PROJECT_ISSUE_TYPES') {
             // Handle project-specific issue type requests
             (async () => {
@@ -321,4 +350,156 @@ function setupMessageHandler() {
     
     return false;
   });
+}
+
+/**
+ * Setup message display action (toolbar button)
+ */
+function setupMessageDisplayAction() {
+  // Handle message display action clicks
+  browser.messageDisplayAction.onClicked.addListener(async (tab, info) => {
+    try {
+      console.log('Message display action clicked', tab, info);
+      
+      // Get the current tab's messages using mailTabs API
+      let message = null;
+      try {
+        const messageList = await browser.mailTabs.getSelectedMessages(tab.id);
+        if (messageList.messages && messageList.messages.length > 0) {
+          message = messageList.messages[0]; // Use the first selected message
+        }
+      } catch (error) {
+        console.error('Error getting selected messages:', error);
+        return;
+      }
+
+      if (!message) {
+        browser.notifications.create({
+          type: "basic",
+          iconUrl: "icons/icon-48.png",
+          title: "Jira Connector",
+          message: "No email selected or displayed."
+        });
+        return;
+      }
+
+      // Check if this message already has a Jira issue linked
+      const linkedIssue = await getLinkedJiraIssue(message.id);
+      
+      if (linkedIssue) {
+        // Open the existing Jira issue
+        await openJiraIssue(linkedIssue);
+      } else {
+        // Check if Jira is configured
+        const isConfigured = await JiraAPI.isConfigured();
+        if (!isConfigured) {
+          browser.notifications.create({
+            type: "basic",
+            iconUrl: "icons/icon-48.png",
+            title: "Jira Connector",
+            message: "Please configure Jira settings in the extension options first."
+          });
+          browser.runtime.openOptionsPage();
+          return;
+        }
+
+        // Create a new Jira issue from this message
+        await processMessage(message);
+      }
+
+    } catch (error) {
+      console.error('Error in message display action handler:', error);
+      browser.notifications.create({
+        type: "basic",
+        iconUrl: "icons/icon-48.png",
+        title: "Jira Connector - Error",
+        message: `Error: ${error.message}`
+      });
+    }
+  });
+
+  // Update button text based on current message selection
+  // Note: Thunderbird doesn't support dynamic button text updates the same way as other browsers
+  // We'll implement a simpler approach
+  console.log('Message display action setup complete');
+}
+
+/**
+ * Get linked Jira issue for a message
+ */
+async function getLinkedJiraIssue(messageId) {
+  try {
+    const storageKey = `jira_link_${messageId}`;
+    const result = await browser.storage.local.get(storageKey);
+    return result[storageKey] || null;
+  } catch (error) {
+    console.error('Error getting linked Jira issue:', error);
+    return null;
+  }
+}
+
+/**
+ * Store link between message and Jira issue
+ */
+async function storeJiraIssueLink(messageId, issueData) {
+  try {
+    const storageKey = `jira_link_${messageId}`;
+    await browser.storage.local.set({
+      [storageKey]: {
+        key: issueData.key,
+        url: issueData.self || `${await getJiraBaseUrl()}/browse/${issueData.key}`,
+        createdAt: new Date().toISOString()
+      }
+    });
+    console.log(`Stored Jira issue link: ${messageId} -> ${issueData.key}`);
+  } catch (error) {
+    console.error('Error storing Jira issue link:', error);
+  }
+}
+
+/**
+ * Open Jira issue in browser
+ */
+async function openJiraIssue(linkedIssue) {
+  try {
+    let issueUrl = linkedIssue.url;
+    
+    // If URL is not stored or is the API URL, construct the browse URL
+    if (!issueUrl || issueUrl.includes('/rest/api/')) {
+      const baseUrl = await getJiraBaseUrl();
+      issueUrl = `${baseUrl}/browse/${linkedIssue.key}`;
+    }
+
+    // Open the issue in default browser
+    await browser.windows.openDefaultBrowser(issueUrl);
+    
+    browser.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon-48.png",
+      title: "Jira Connector",
+      message: `Opening Jira issue: ${linkedIssue.key}`
+    });
+
+  } catch (error) {
+    console.error('Error opening Jira issue:', error);
+    browser.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon-48.png",
+      title: "Jira Connector - Error",
+      message: `Failed to open issue: ${error.message}`
+    });
+  }
+}
+
+/**
+ * Get Jira base URL from settings
+ */
+async function getJiraBaseUrl() {
+  try {
+    const settings = await browser.storage.local.get('jiraBaseUrl');
+    return settings.jiraBaseUrl || '';
+  } catch (error) {
+    console.error('Error getting Jira base URL:', error);
+    return '';
+  }
 }
