@@ -30,7 +30,7 @@ function setupContextMenu() {
   browser.menus.removeAll().then(() => {
     browser.menus.create({
       id: "send-to-jira",
-      title: "Send to Jira",
+      title: "Create Jira Issue",
       contexts: ["message_list"],
       icons: {
         "16": "icons/icon-16.png"
@@ -52,7 +52,7 @@ browser.menus.onClicked.addListener(async (info, tab) => {
   console.log('Context menu clicked - menuItemId:', info.menuItemId);
   if (info.menuItemId === "send-to-jira") {
     try {
-      console.log('Send to Jira clicked', info);
+      console.log('Create Jira Issue clicked', info);
       
       // Check if Jira is configured
       const isConfigured = await JiraAPI.isConfigured();
@@ -418,10 +418,31 @@ function setupMessageDisplayAction() {
     }
   });
 
-  // Update button text based on current message selection
-  // Note: Thunderbird doesn't support dynamic button text updates the same way as other browsers
-  // We'll implement a simpler approach
   console.log('Message display action setup complete');
+}
+
+/**
+ * Force refresh all button texts across all mail tabs
+ */
+async function forceRefreshAllButtonTexts() {
+  try {
+    console.log('Force refreshing all button texts...');
+    const allTabs = await browser.tabs.query({});
+    
+    for (const tab of allTabs) {
+      try {
+        await updateButtonTextForCurrentMessage(tab.id);
+        // Small delay between tab updates
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch (error) {
+        // Ignore errors for non-mail tabs
+      }
+    }
+    
+    console.log('Force refresh completed');
+  } catch (error) {
+    console.error('Error in force refresh:', error);
+  }
 }
 
 /**
@@ -430,8 +451,42 @@ function setupMessageDisplayAction() {
 async function getLinkedJiraIssue(messageId) {
   try {
     const storageKey = `jira_link_${messageId}`;
+    console.log(`Looking for linked issue with key: ${storageKey}`);
+    
     const result = await browser.storage.local.get(storageKey);
-    return result[storageKey] || null;
+    const linkedIssue = result[storageKey] || null;
+    
+    if (linkedIssue) {
+      console.log(`Found linked issue for message ${messageId}:`, linkedIssue);
+    } else {
+      console.log(`No linked issue found for message ${messageId}`);
+    }
+    
+    return linkedIssue;
+  } catch (error) {
+    console.error('Error getting linked Jira issue:', error);
+    return null;
+  }
+}
+
+/**
+ * Get linked Jira issue for a message
+ */
+async function getLinkedJiraIssue(messageId) {
+  try {
+    const storageKey = `jira_link_${messageId}`;
+    console.log(`Looking for linked issue with key: ${storageKey}`);
+    
+    const result = await browser.storage.local.get(storageKey);
+    const linkedIssue = result[storageKey] || null;
+    
+    if (linkedIssue) {
+      console.log(`Found linked issue for message ${messageId}:`, linkedIssue);
+    } else {
+      console.log(`No linked issue found for message ${messageId}`);
+    }
+    
+    return linkedIssue;
   } catch (error) {
     console.error('Error getting linked Jira issue:', error);
     return null;
