@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     const urlParams = new URLSearchParams(window.location.search);
     const emailSubject = urlParams.get('subject') || 'No subject';
     document.getElementById('emailSubject').textContent = emailSubject;
+    // Pre-fill issue title input with subject
+    const issueTitleInput = document.getElementById('issueTitleInput');
+    if (issueTitleInput) {
+        issueTitleInput.value = emailSubject;
+    }
     
     // Setup event listeners
     setupEventListeners();
@@ -272,11 +277,15 @@ function handleCreate() {
         return;
     }
     
+    // Get edited issue title
+    const issueTitleInput = document.getElementById('issueTitleInput');
+    const issueTitle = issueTitleInput ? issueTitleInput.value.trim() : '';
     const result = {
         project: selectedProject,
-        issueType: selectedIssueType
+        issueType: selectedIssueType,
+        issueTitle: issueTitle
     };
-    
+
     console.log('Sending selection result:', result);
     
     browser.runtime.sendMessage({ 

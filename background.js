@@ -121,7 +121,7 @@ async function processMessage(message) {
 
     // Create Jira issue
     const issueData = {
-      summary: message.subject,
+      summary: selectionResult.issueTitle || message.subject,
       description: messageContent,
       project: selectionResult.project,
       issueType: selectionResult.issueType
